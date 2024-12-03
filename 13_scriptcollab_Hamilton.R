@@ -21,39 +21,25 @@ ham <- subset(ham, select = -c(HAMD16B, HAMD16A)) # Supprimer les colonnes HAMD1
 ham$HS <- rowSums(subset(ham, select = HAMD1:HAMD16), na.rm = TRUE)# Calculer le score global de Hamilton
 
 ###### Calculer le sous-score dépression de SCL90
-col_scl_D <- paste0("Q", c(5, 14, 15, 20, 22, 26, 29, 30, 31, 32, 54, 71, 79))
-scl[col_scl_D] <- lapply(scl[col_scl_D], function(x) as.numeric(as.character(x)))
+cols_list <- list(
+  D = c(5, 14, 15, 20, 22, 26, 29, 30, 31, 32, 54, 71, 79),
+  Som = c(1, 4, 12, 27, 42, 48, 49, 52, 53, 56, 58, 40),
+  Obs = c(9, 10, 28, 38, 3, 45, 46, 51, 55, 65),
+  Hos = c(11, 24, 63, 67, 74, 81),
+  Phob = c(13, 25, 47, 70, 75, 82, 50),
+  Para = c(8, 18, 43, 68, 76, 83),
+  Psycho = c(7, 16, 35, 62, 77, 84, 85, 87, 90, 88),
+  Div = c(19, 44, 59, 60, 64, 66, 89),
+  Sens = c(6, 21, 34, 36, 37, 41, 61, 69, 73),
+  Anx = c(2, 17, 23, 33, 39, 57, 72, 78, 80, 86)
+)
 
-col_scl_Som <- paste0("Q", c(1,4,12,27,42,48,49,52,53,56,58,40))
-scl[col_scl_Som] <- lapply(scl[col_scl_Som], function(x) as.numeric(as.character(x)))
+for (name in names(cols_list)) {
+  cols <- paste0("Q", cols_list[[name]])
+  scl[cols] <- lapply(scl[cols], function(x) as.numeric(as.character(x)))
+  scl[[paste0("HS_", name)]] <- rowSums(scl[cols], na.rm = TRUE)
+}
 
-col_scl_Obs <- paste0("Q", c(9,10,28,38,3,45,46,51,55,65))
-scl[col_scl_Obs] <- lapply(scl[col_scl_Obs], function(x) as.numeric(as.character(x)))
-
-col_scl_Hos <- paste0("Q", c(11,24,63,67,74,81))
-scl[col_scl_Hos] <- lapply(scl[col_scl_Hos], function(x) as.numeric(as.character(x)))
-
-col_scl_Phob <- paste0("Q", c(13,25,47,70,75,82,50))
-scl[col_scl_Phob] <- lapply(scl[col_scl_Phob], function(x) as.numeric(as.character(x)))
-
-col_scl_Para <- paste0("Q", c(8,18,43,68,76,83))
-scl[col_scl_Para] <- lapply(scl[col_scl_Para], function(x) as.numeric(as.character(x)))
-
-col_scl_Psycho <- paste0("Q", c(7,16,35,62,77,84,85,87,90,88))
-scl[col_scl_Psycho] <- lapply(scl[col_scl_Psycho], function(x) as.numeric(as.character(x)))
-
-col_scl_Div <- paste0("Q", c(19,44,59,60,64,66,89))
-scl[col_scl_Div] <- lapply(scl[col_scl_Div], function(x) as.numeric(as.character(x)))
-
-# Calculer le sous-score dépression
-scl$HS_D <- rowSums(scl[, col_scl_D], na.rm = TRUE)
-scl$HS_Som <- rowSums(scl[col_scl_Som], na.rm = TRUE)
-scl$HS_Obs <- rowSums(scl[col_scl_Obs], na.rm = TRUE)
-scl$HS_Hos <- rowSums(scl[, col_scl_Hos], na.rm = TRUE)
-scl$HS_Phob <- rowSums(scl[, col_scl_Phob], na.rm = TRUE)
-scl$HS_Para <- rowSums(scl[, col_scl_Para], na.rm = TRUE)
-scl$HS_Psyc <- rowSums(scl[, col_scl_Psycho], na.rm = TRUE)
-scl$HS_Div <- rowSums(scl[, col_scl_Div], na.rm = TRUE)
 
 ###### Constitution d'un dataframe global au format large (db_large)
 
@@ -64,7 +50,7 @@ ham <- merge(gp, as.data.frame(ham), by="NUMERO", all.x = T, all.y = T) # Fusion
 ham_large <- dcast(as.data.table(ham), NUMERO ~ VISIT, value.var = c(paste0("HAMD", (1:16)), "HS")) # Transformer les données `ham` en format large avec `dcast`
 
 db_large <- merge(gp, as.data.frame(ham_large), by="NUMERO", all.x = T, all.y = T) # Fusionner les données du groupe `gp` avec les données `ham_large`
-scl_large <- dcast(as.data.table(scl), NUMERO ~ VISIT, value.var = c(paste0("Q", 1:90), "HS_D", "HS_Som", "HS_Obs", "HS_Hos", "HS_Phob", "HS_Para", "HS_Psyc", "HS_Div"), fill = NA) # Transformer les données `scl` en format large avec `dcast`
+scl_large <- dcast(as.data.table(scl), NUMERO ~ VISIT, value.var = c(paste0("Q", 1:90), "HS_D", "HS_Som", "HS_Obs", "HS_Hos", "HS_Phob", "HS_Para", "HS_Psycho", "HS_Div", "HS_Sens", "HS_Anx"), fill = NA) # Transformer les données `scl` en format large avec `dcast`
 db_large <- merge(as.data.frame(scl_large), db_large, by="NUMERO", all.x = T, all.y = T) # Fusionner `scl_large` et `db_large` pour obtenir un dataframe complet
 
 sum(is.na(ham))
@@ -196,34 +182,48 @@ cronbach(db_large[, col_af2_J56])
 
 
 
-SS_SCL <- c("HS_D", "HS_Som", "HS_Obs", "HS_Hos", "HS_Phob", "HS_Para", "HS_Psyc", "HS_Div")
+###### Modifier les noms des sous-scores pour correspondre à la description
+SS_SCL <- c("HS_D", "HS_Som", "HS_Obs", "HS_Hos", "HS_Phob", "HS_Para", "HS_Psyc", "HS_Div", "HS_Sens", "HS_Anx")
 
 # Initialiser les tableaux de corrélation pour J0 et J56
 correlations_J0 <- data.frame(Sous_Score = SS_SCL, Correlation = numeric(length(SS_SCL)))
 correlations_J56 <- data.frame(Sous_Score = SS_SCL, Correlation = numeric(length(SS_SCL)))
 
 # Calculer les corrélations pour J0
-for (i in SS_SCL) {
-  corr_value <- cor(db_large[, paste0(i, "_J0")], db_large$HS_J0, use = "complete.obs", method = "pearson")
-  correlations_J0[correlations_J0$Sous_Score == i, "Correlation"] <- round(corr_value, 3)
+for (i in seq_along(SS_SCL)) {
+  col_name <- paste0(SS_SCL[i], "_J0")
+  if (col_name %in% names(db_large)) {
+    corr_value <- cor(db_large[[col_name]], db_large$HS_J0, use = "complete.obs", method = "pearson")
+    correlations_J0[i, "Correlation"] <- round(corr_value, 3)
+  }
 }
 
 # Calculer les corrélations pour J56
-for (i in SS_SCL) {
-  corr_value <- cor(db_large[, paste0(i, "_J56")], db_large$HS_J0, use = "complete.obs", method = "pearson")
-  correlations_J56[correlations_J56$Sous_Score == i, "Correlation"] <- round(corr_value, 3)
+for (i in seq_along(SS_SCL)) {
+  col_name <- paste0(SS_SCL[i], "_J56")
+  if (col_name %in% names(db_large)) {
+    corr_value <- cor(db_large[[col_name]], db_large$HS_J0, use = "complete.obs", method = "pearson")
+    correlations_J56[i, "Correlation"] <- round(corr_value, 3)
+  }
 }
 
-
 correlation_table <- merge(correlations_J0, correlations_J56, by = "Sous_Score", suffixes = c("_J0", "_J56"))
+correlation_table$Sous_Score <- c("Dépression", "Somatisation", "Symptômes obsessionnels", "Hostilité", "Phobies", "Traits paranoïaques", "Traits psychotiques", "Symptômes divers", "Sensitivité interpersonnelle", "Anxiété")
+print(correlation_table)
+
 colnames(correlation_table) <- c("Sous-Score", "Corrélation J0", "Corrélation J56")
 
 write.csv(correlation_table, "/home/wasabee/M2/Devoirs/D2/correlation_table.csv", row.names = FALSE)
 
 
-################################## Question 2 Model mixtes
 
-######### Répartition de la moyenne du score de HAMD au cours du temps ##################################
+
+#######################################################################################################################################################################
+############################################### Question 2 Model mixtes ###############################################################################################
+#######################################################################################################################################################################
+
+
+######### Repartition de la moyenne du score de HAMD au cours du temps ##################################
 # Extraire les jours de visite en tant que valeurs numériques
 ham$J.VISIT <- as.numeric(sub("J", "", ham$VISIT))
 
